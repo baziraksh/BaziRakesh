@@ -313,8 +313,8 @@ function update() {
     if (!gameStarted || gameOver) return;
 
     // Update game objects
+    updatePlayerPosition();
     stars.forEach(star => star.update());
-    player.update();
     projectiles = projectiles.filter(p => p.y > 0);
     projectiles.forEach(p => p.update());
     enemies = enemies.filter(e => e.y < GAME_HEIGHT);
@@ -429,12 +429,13 @@ canvas.addEventListener('click', (e) => {
     ));
 });
 
-// Add touch event listeners
+// Update touch event listeners for better mobile control
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    player.x = touchX - player.width/2;
     isShooting = true;
 });
 
@@ -443,6 +444,7 @@ canvas.addEventListener('touchmove', (e) => {
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    player.x = touchX - player.width/2;
 });
 
 canvas.addEventListener('touchend', () => {
@@ -450,11 +452,13 @@ canvas.addEventListener('touchend', () => {
     isShooting = false;
 });
 
-// Update player movement to support touch
+// Update player movement to be more responsive on mobile
 function updatePlayerPosition() {
     if (touchX !== null) {
-        const targetX = touchX - player.width/2;
-        player.dx = (targetX - player.x) * 0.1;
+        player.x = touchX - player.width/2;
+        // Keep player within canvas bounds
+        if (player.x < 0) player.x = 0;
+        if (player.x > GAME_WIDTH - player.width) player.x = GAME_WIDTH - player.width;
     }
 }
 
