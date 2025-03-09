@@ -9,58 +9,19 @@ let gameOver = false;
 let score = 0;
 let difficulty = null;
 
-// Scale factors for responsive design
-let scaleX = 1;
-let scaleY = 1;
-
 // Game objects
 let player;
 let enemies = [];
 let projectiles = [];
 let stars = [];
 
-// Difficulty settings
-const DIFFICULTY_SETTINGS = {
-    EASY: {
-        enemySpawnChance: 0.01,
-        enemySpeed: 2,
-        scoreMultiplier: 1,
-        color: '#00ff00'
-    },
-    MEDIUM: {
-        enemySpawnChance: 0.02,
-        enemySpeed: 3,
-        scoreMultiplier: 2,
-        color: '#ffa500'
-    },
-    HARD: {
-        enemySpawnChance: 0.03,
-        enemySpeed: 4,
-        scoreMultiplier: 3,
-        color: '#ff0000'
-    }
-};
-
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Handle window resize
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    scaleX = canvas.width / GAME_WIDTH;
-    scaleY = canvas.height / GAME_HEIGHT;
-    
-    // Update game objects positions if needed
-    if (player) {
-        player.y = canvas.height - 100;
-    }
-}
-
-// Initial resize
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+// Set fixed canvas size
+canvas.width = GAME_WIDTH;
+canvas.height = GAME_HEIGHT;
 
 // Load images
 const playerImage = new Image();
@@ -86,41 +47,6 @@ function playSound(sound) {
     }
 }
 
-// Touch controls
-let touchX = null;
-let isShooting = false;
-let lastShootTime = 0;
-const SHOOT_DELAY = 250; // Minimum time between shots in milliseconds
-
-// Particle system for explosions
-class Particle {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.size = Math.random() * 3 + 1;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 4 + 2;
-        this.dx = Math.cos(angle) * speed;
-        this.dy = Math.sin(angle) * speed;
-        this.life = 1.0; // Full life
-        this.fadeSpeed = Math.random() * 0.02 + 0.02;
-    }
-
-    update() {
-        this.x += this.dx;
-        this.y += this.dy;
-        this.life -= this.fadeSpeed;
-    }
-
-    draw(ctx) {
-        ctx.fillStyle = `rgba(${this.color}, ${this.life})`;
-        ctx.fillRect(this.x, this.y, this.size, this.size);
-    }
-}
-
-let particles = [];
-
 // Game objects classes
 class Player {
     constructor(x, y) {
@@ -138,25 +64,20 @@ class Player {
     }
 
     draw() {
-        const scaledX = this.x * scaleX;
-        const scaledY = this.y * scaleY;
-        const scaledWidth = this.width * scaleX;
-        const scaledHeight = this.height * scaleY;
-
         if (playerImage.complete) {
-            ctx.drawImage(playerImage, scaledX, scaledY, scaledWidth, scaledHeight);
+            ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
         } else {
             ctx.fillStyle = '#00ff00';
-            ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
+            ctx.fillRect(this.x, this.y, this.width, this.height);
         }
     }
 
     getBounds() {
         return {
-            x: this.x * scaleX,
-            y: this.y * scaleY,
-            width: this.width * scaleX,
-            height: this.height * scaleY
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height
         };
     }
 }
@@ -175,47 +96,21 @@ class Enemy {
     }
 
     draw() {
-        const scaledX = this.x * scaleX;
-        const scaledY = this.y * scaleY;
-        const scaledWidth = this.width * scaleX;
-        const scaledHeight = this.height * scaleY;
-
         if (enemyImage.complete) {
-            ctx.drawImage(enemyImage, scaledX, scaledY, scaledWidth, scaledHeight);
+            ctx.drawImage(enemyImage, this.x, this.y, this.width, this.height);
         } else {
             ctx.fillStyle = difficulty ? DIFFICULTY_SETTINGS[difficulty].color : '#ff0000';
-            ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
+            ctx.fillRect(this.x, this.y, this.width, this.height);
         }
     }
 
     getBounds() {
         return {
-            x: this.x * scaleX,
-            y: this.y * scaleY,
-            width: this.width * scaleX,
-            height: this.height * scaleY
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height
         };
-    }
-
-    explode() {
-        const colorString = difficulty ? DIFFICULTY_SETTINGS[difficulty].color : '#ff0000';
-        const rgb = this.hexToRgb(colorString);
-        for (let i = 0; i < 20; i++) {
-            particles.push(new Particle(
-                this.x + this.width/2,
-                this.y + this.height/2,
-                `${rgb.r}, ${rgb.g}, ${rgb.b}`
-            ));
-        }
-    }
-
-    hexToRgb(hex) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : {r: 255, g: 0, b: 0};
     }
 }
 
@@ -233,73 +128,22 @@ class Projectile {
     }
 
     draw() {
-        const scaledX = this.x * scaleX;
-        const scaledY = this.y * scaleY;
-        const scaledWidth = this.width * scaleX;
-        const scaledHeight = this.height * scaleY;
-
         if (projectileImage.complete) {
-            ctx.drawImage(projectileImage, scaledX - scaledWidth/2, scaledY, scaledWidth, scaledHeight);
-            
-            // Add glowing trail effect
-            ctx.save();
-            ctx.globalAlpha = 0.5;
-            for (let i = 0; i < 3; i++) {
-                ctx.globalAlpha = 0.2 - (i * 0.05);
-                ctx.drawImage(projectileImage, 
-                    scaledX - scaledWidth/2,
-                    scaledY + (i * 10 * scaleY),
-                    scaledWidth,
-                    scaledHeight
-                );
-            }
-            ctx.restore();
+            ctx.drawImage(projectileImage, this.x - this.width/2, this.y, this.width, this.height);
         } else {
             ctx.fillStyle = '#ffff00';
-            ctx.fillRect(scaledX - scaledWidth/2, scaledY, scaledWidth, scaledHeight);
+            ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height);
         }
     }
 
     getBounds() {
         return {
-            x: (this.x - this.width/2) * scaleX,
-            y: this.y * scaleY,
-            width: this.width * scaleX,
-            height: this.height * scaleY
+            x: this.x - this.width/2,
+            y: this.y,
+            width: this.width,
+            height: this.height
         };
     }
-}
-
-class Star {
-    constructor() {
-        this.reset();
-    }
-
-    reset() {
-        this.x = Math.random() * GAME_WIDTH;
-        this.y = Math.random() * GAME_HEIGHT;
-        this.speed = Math.random() * 2 + 1;
-        this.brightness = Math.random();
-    }
-
-    update() {
-        this.y += this.speed;
-        if (this.y > GAME_HEIGHT) {
-            this.reset();
-            this.y = 0;
-        }
-        this.brightness = Math.max(0.2, Math.abs(Math.sin(Date.now() * 0.003 + this.x * 0.1)));
-    }
-
-    draw() {
-        ctx.fillStyle = `rgba(255, 255, 255, ${this.brightness})`;
-        ctx.fillRect(this.x, this.y, this.speed, this.speed);
-    }
-}
-
-// Initialize stars
-for (let i = 0; i < 100; i++) {
-    stars.push(new Star());
 }
 
 // Game functions
@@ -320,148 +164,15 @@ function initGame() {
     // Make sure canvas is visible
     canvas.style.display = 'block';
     
-    // Resize canvas to ensure proper dimensions
-    resizeCanvas();
-
     playSound('background');
 }
 
-function checkCollisions() {
-    projectiles.forEach((projectile, pIndex) => {
-        enemies.forEach((enemy, eIndex) => {
-            if (isColliding(projectile.getBounds(), enemy.getBounds())) {
-                enemy.explode();
-                playSound('explosion');
-                projectiles.splice(pIndex, 1);
-                enemies.splice(eIndex, 1);
-                score += 10 * DIFFICULTY_SETTINGS[difficulty].scoreMultiplier;
-            }
-        });
-    });
-
-    enemies.forEach(enemy => {
-        if (isColliding(player.getBounds(), enemy.getBounds())) {
-            enemy.explode();
-            playSound('gameOver');
-            gameOver = true;
-        }
-    });
-}
-
-function isColliding(rect1, rect2) {
-    return rect1.x < rect2.x + rect2.width &&
-           rect1.x + rect1.width > rect2.x &&
-           rect1.y < rect2.y + rect2.height &&
-           rect1.y + rect1.height > rect2.y;
-}
-
-function update() {
-    if (!gameStarted || gameOver) return;
-
-    // Update game objects
-    updatePlayerPosition();
-    stars.forEach(star => star.update());
-    projectiles = projectiles.filter(p => p.y > 0);
-    projectiles.forEach(p => p.update());
-    enemies = enemies.filter(e => e.y < GAME_HEIGHT);
-    enemies.forEach(e => e.update());
-
-    // Spawn enemies
-    if (Math.random() < DIFFICULTY_SETTINGS[difficulty].enemySpawnChance) {
-        enemies.push(new Enemy(
-            Math.random() * (GAME_WIDTH - 40),
-            0,
-            DIFFICULTY_SETTINGS[difficulty].enemySpeed
-        ));
-    }
-
-    checkCollisions();
-
-    // Check for game over
-    if (enemies.some(e => e.y > GAME_HEIGHT)) {
-        gameOver = true;
-    }
-
-    // Update particles
-    particles = particles.filter(p => p.life > 0);
-    particles.forEach(p => p.update());
-
-    // Auto-shoot if touch is active
-    if (isShooting && Date.now() - lastShootTime > SHOOT_DELAY) {
-        projectiles.push(new Projectile(player.x + player.width/2, player.y));
-        playSound('shoot');
-        lastShootTime = Date.now();
-    }
-}
-
-function draw() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw stars
-    stars.forEach(star => star.draw());
-
-    if (gameStarted) {
-        // Draw game objects
-        player.draw();
-        enemies.forEach(e => e.draw());
-        projectiles.forEach(p => p.draw());
-
-        // Draw score with scaled font size
-        ctx.fillStyle = '#fff';
-        ctx.font = `${20 * Math.min(scaleX, scaleY)}px Arial`;
-        ctx.fillText(`Score: ${score}`, 10 * scaleX, 30 * scaleY);
-        ctx.fillText(`Difficulty: ${difficulty}`, 10 * scaleX, 60 * scaleY);
-
-        if (gameOver) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#fff';
-            ctx.font = `${48 * Math.min(scaleX, scaleY)}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.fillText('Game Over!', canvas.width/2, canvas.height/2);
-            ctx.font = `${24 * Math.min(scaleX, scaleY)}px Arial`;
-            ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 50 * scaleY);
-            ctx.fillText('Click to play again', canvas.width/2, canvas.height/2 + 100 * scaleY);
-            ctx.textAlign = 'left';
-        }
-    }
-
-    // Draw particles
-    particles.forEach(p => p.draw(ctx));
-}
-
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-
-// Event listeners
-document.getElementById('easy').addEventListener('click', () => {
-    difficulty = 'EASY';
-    initGame();
-    console.log('Easy mode selected'); // Debug log
-});
-
-document.getElementById('medium').addEventListener('click', () => {
-    difficulty = 'MEDIUM';
-    initGame();
-    console.log('Medium mode selected'); // Debug log
-});
-
-document.getElementById('hard').addEventListener('click', () => {
-    difficulty = 'HARD';
-    initGame();
-    console.log('Hard mode selected'); // Debug log
-});
-
+// Mouse/Touch controls
 canvas.addEventListener('mousemove', (e) => {
     if (!gameStarted || gameOver) return;
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    player.dx = (x - player.x - player.width/2) * 0.1;
+    const x = e.clientX - rect.left;
+    player.x = x - player.width/2;
 });
 
 canvas.addEventListener('click', (e) => {
@@ -479,54 +190,152 @@ canvas.addEventListener('click', (e) => {
         player.x + player.width/2,
         player.y
     ));
+    playSound('shoot');
 });
 
-// Update touch event listeners for better mobile control
+// Touch controls
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (!gameStarted || gameOver) return;
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    touchX = (touch.clientX - rect.left) / scaleX;
-    player.x = touchX - player.width/2;
-    isShooting = true;
+    const x = touch.clientX - rect.left;
+    player.x = x - player.width/2;
 });
 
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
+    if (!gameStarted || gameOver) return;
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    touchX = (touch.clientX - rect.left) / scaleX;
-    player.x = touchX - player.width/2;
+    const x = touch.clientX - rect.left;
+    player.x = x - player.width/2;
 });
 
-canvas.addEventListener('touchend', () => {
-    touchX = null;
-    isShooting = false;
+// Difficulty settings
+const DIFFICULTY_SETTINGS = {
+    EASY: {
+        enemySpawnChance: 0.01,
+        enemySpeed: 2,
+        scoreMultiplier: 1,
+        color: '#00ff00'
+    },
+    MEDIUM: {
+        enemySpawnChance: 0.02,
+        enemySpeed: 3,
+        scoreMultiplier: 2,
+        color: '#ffa500'
+    },
+    HARD: {
+        enemySpawnChance: 0.03,
+        enemySpeed: 4,
+        scoreMultiplier: 3,
+        color: '#ff0000'
+    }
+};
+
+// Event listeners for difficulty buttons
+document.getElementById('easy').addEventListener('click', () => {
+    difficulty = 'EASY';
+    initGame();
 });
 
-// Update player movement to be more responsive on mobile
-function updatePlayerPosition() {
-    if (touchX !== null) {
-        player.x = touchX - player.width/2;
-        // Keep player within canvas bounds
-        if (player.x < 0) player.x = 0;
-        if (player.x > GAME_WIDTH - player.width) player.x = GAME_WIDTH - player.width;
+document.getElementById('medium').addEventListener('click', () => {
+    difficulty = 'MEDIUM';
+    initGame();
+});
+
+document.getElementById('hard').addEventListener('click', () => {
+    difficulty = 'HARD';
+    initGame();
+});
+
+function checkCollisions() {
+    projectiles.forEach((projectile, pIndex) => {
+        enemies.forEach((enemy, eIndex) => {
+            if (isColliding(projectile.getBounds(), enemy.getBounds())) {
+                projectiles.splice(pIndex, 1);
+                enemies.splice(eIndex, 1);
+                score += 10 * DIFFICULTY_SETTINGS[difficulty].scoreMultiplier;
+                playSound('explosion');
+            }
+        });
+    });
+
+    enemies.forEach(enemy => {
+        if (isColliding(player.getBounds(), enemy.getBounds())) {
+            playSound('gameOver');
+            gameOver = true;
+        }
+    });
+}
+
+function isColliding(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.width &&
+           rect1.x + rect1.width > rect2.x &&
+           rect1.y < rect2.y + rect2.height &&
+           rect1.y + rect1.height > rect2.y;
+}
+
+function update() {
+    if (!gameStarted || gameOver) return;
+
+    player.update();
+    projectiles = projectiles.filter(p => p.y > 0);
+    projectiles.forEach(p => p.update());
+    enemies = enemies.filter(e => e.y < GAME_HEIGHT);
+    enemies.forEach(e => e.update());
+
+    if (Math.random() < DIFFICULTY_SETTINGS[difficulty].enemySpawnChance) {
+        enemies.push(new Enemy(
+            Math.random() * (GAME_WIDTH - 40),
+            0,
+            DIFFICULTY_SETTINGS[difficulty].enemySpeed
+        ));
+    }
+
+    checkCollisions();
+
+    if (enemies.some(e => e.y > GAME_HEIGHT)) {
+        gameOver = true;
     }
 }
 
-// Sound toggle button
-document.getElementById('soundToggle').addEventListener('click', () => {
-    soundEnabled = !soundEnabled;
-    document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
-    if (!soundEnabled) {
-        Object.values(sounds).forEach(sound => {
-            sound.pause();
-            sound.currentTime = 0;
-        });
-    } else if (gameStarted && !gameOver) {
-        playSound('background');
+function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    if (gameStarted) {
+        player.draw();
+        enemies.forEach(e => e.draw());
+        projectiles.forEach(p => p.draw());
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Score: ${score}`, 10, 30);
+        ctx.fillText(`Difficulty: ${difficulty}`, 10, 60);
+
+        if (gameOver) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over!', GAME_WIDTH/2, GAME_HEIGHT/2);
+            ctx.font = '24px Arial';
+            ctx.fillText(`Final Score: ${score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 50);
+            ctx.fillText('Click to play again', GAME_WIDTH/2, GAME_HEIGHT/2 + 100);
+            ctx.textAlign = 'left';
+        }
     }
-});
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
 
 // Start game loop
 gameLoop(); 
