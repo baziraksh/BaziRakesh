@@ -2,12 +2,15 @@
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 const PLAYER_SPEED = 8;
+const SHOOT_DELAY = 250; // Delay between shots in milliseconds
 
 // Game state
 let gameStarted = false;
 let gameOver = false;
 let score = 0;
 let difficulty = null;
+let lastShootTime = 0; // Track last shot time
+let isMoving = false; // Track if player is moving
 
 // Game objects
 let player;
@@ -22,14 +25,6 @@ const ctx = canvas.getContext('2d');
 // Set fixed canvas size
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
-
-// Load images
-const playerImage = new Image();
-const enemyImage = new Image();
-const projectileImage = new Image();
-playerImage.src = 'space.jpg';
-enemyImage.src = 'enemy.jpg';
-projectileImage.src = 'bullet.jpg';
 
 // Sound management
 let soundEnabled = true;
@@ -64,12 +59,19 @@ class Player {
     }
 
     draw() {
-        if (playerImage.complete) {
-            ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
-        } else {
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-        }
+        // Draw player ship as a triangle
+        ctx.fillStyle = '#00ff00';
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width/2, this.y);
+        ctx.lineTo(this.x + this.width, this.y + this.height);
+        ctx.lineTo(this.x, this.y + this.height);
+        ctx.closePath();
+        ctx.fill();
+
+        // Add some details
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 
     getBounds() {
@@ -96,12 +98,20 @@ class Enemy {
     }
 
     draw() {
-        if (enemyImage.complete) {
-            ctx.drawImage(enemyImage, this.x, this.y, this.width, this.height);
-        } else {
-            ctx.fillStyle = difficulty ? DIFFICULTY_SETTINGS[difficulty].color : '#ff0000';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
-        }
+        // Draw enemy as a colored diamond
+        ctx.fillStyle = difficulty ? DIFFICULTY_SETTINGS[difficulty].color : '#ff0000';
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width/2, this.y);
+        ctx.lineTo(this.x + this.width, this.y + this.height/2);
+        ctx.lineTo(this.x + this.width/2, this.y + this.height);
+        ctx.lineTo(this.x, this.y + this.height/2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Add glow effect
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 
     getBounds() {
@@ -118,8 +128,8 @@ class Projectile {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 10;
-        this.height = 20;
+        this.width = 4;
+        this.height = 16;
         this.speed = 15;
     }
 
@@ -128,12 +138,17 @@ class Projectile {
     }
 
     draw() {
-        if (projectileImage.complete) {
-            ctx.drawImage(projectileImage, this.x - this.width/2, this.y, this.width, this.height);
-        } else {
-            ctx.fillStyle = '#ffff00';
-            ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height);
-        }
+        // Draw bullet with glow effect
+        // Main bullet
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height);
+        
+        // Glow effect
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#00ffff';
+        ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height);
+        ctx.shadowBlur = 0;
     }
 
     getBounds() {
@@ -172,18 +187,40 @@ canvas.addEventListener('mousemove', (e) => {
     if (!gameStarted || gameOver) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const oldX = player.x;
     player.x = x - player.width/2;
+    
+    // Auto-fire while moving
+    isMoving = Math.abs(oldX - player.x) > 1;
+    if (isMoving && Date.now() - lastShootTime > SHOOT_DELAY) {
+        projectiles.push(new Projectile(
+            player.x + player.width/2,
+            player.y
+        ));
+        playSound('shoot');
+        lastShootTime = Date.now();
+    }
+});
+
+canvas.addEventListener('mouseout', () => {
+    isMoving = false;
 });
 
 canvas.addEventListener('click', (e) => {
     if (gameOver) {
+        // Reset game state
+        gameOver = false;
+        gameStarted = false;
+        score = 0;
+        
+        // Show menu
         const menuScreen = document.getElementById('menuScreen');
         if (menuScreen) {
             menuScreen.style.display = 'flex';
         }
-        gameStarted = false;
         return;
     }
+    
     if (!gameStarted) return;
     
     projectiles.push(new Projectile(
@@ -191,16 +228,33 @@ canvas.addEventListener('click', (e) => {
         player.y
     ));
     playSound('shoot');
+    lastShootTime = Date.now();
 });
 
-// Touch controls
+// Touch controls with play again functionality
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    
+    if (gameOver) {
+        // Reset game state
+        gameOver = false;
+        gameStarted = false;
+        score = 0;
+        
+        // Show menu
+        const menuScreen = document.getElementById('menuScreen');
+        if (menuScreen) {
+            menuScreen.style.display = 'flex';
+        }
+        return;
+    }
+    
     if (!gameStarted || gameOver) return;
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     player.x = x - player.width/2;
+    isMoving = true;
 });
 
 canvas.addEventListener('touchmove', (e) => {
@@ -209,7 +263,23 @@ canvas.addEventListener('touchmove', (e) => {
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     const x = touch.clientX - rect.left;
+    const oldX = player.x;
     player.x = x - player.width/2;
+    
+    // Auto-fire while moving
+    isMoving = Math.abs(oldX - player.x) > 1;
+    if (isMoving && Date.now() - lastShootTime > SHOOT_DELAY) {
+        projectiles.push(new Projectile(
+            player.x + player.width/2,
+            player.y
+        ));
+        playSound('shoot');
+        lastShootTime = Date.now();
+    }
+});
+
+canvas.addEventListener('touchend', () => {
+    isMoving = false;
 });
 
 // Difficulty settings
@@ -281,6 +351,17 @@ function update() {
     if (!gameStarted || gameOver) return;
 
     player.update();
+    
+    // Auto-fire while moving
+    if (isMoving && Date.now() - lastShootTime > SHOOT_DELAY) {
+        projectiles.push(new Projectile(
+            player.x + player.width/2,
+            player.y
+        ));
+        playSound('shoot');
+        lastShootTime = Date.now();
+    }
+
     projectiles = projectiles.filter(p => p.y > 0);
     projectiles.forEach(p => p.update());
     enemies = enemies.filter(e => e.y < GAME_HEIGHT);
