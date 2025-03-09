@@ -12,6 +12,12 @@ let difficulty = null;
 let lastShootTime = 0;
 let isMoving = false;
 
+// Load images
+const playerImage = new Image();
+const enemyImage = new Image();
+playerImage.src = 'space.jpg';
+enemyImage.src = 'enemy.jpg';
+
 // Game objects
 let player;
 let enemies = [];
@@ -51,40 +57,38 @@ class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 50;  // Slightly smaller ship
+        this.width = 50;
         this.height = 50;
         this.dx = 0;
     }
 
     update() {
         this.x += this.dx;
-        // Keep player within bounds
         if (this.x < 0) this.x = 0;
         if (this.x > GAME_WIDTH - this.width) this.x = GAME_WIDTH - this.width;
     }
 
     draw() {
-        // Draw player ship as a triangle with thrusters
-        ctx.fillStyle = '#00ff00';
-        ctx.beginPath();
-        ctx.moveTo(this.x + this.width/2, this.y);  // Top point
-        ctx.lineTo(this.x + this.width, this.y + this.height);  // Bottom right
-        ctx.lineTo(this.x, this.y + this.height);  // Bottom left
-        ctx.closePath();
-        ctx.fill();
-
-        // Add white outline
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Add thruster effect when moving
-        if (isMoving) {
-            ctx.fillStyle = '#ff6600';
+        if (playerImage.complete) {
+            ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
+            
+            // Add thruster effect when moving
+            if (isMoving) {
+                ctx.fillStyle = '#ff6600';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width * 0.3, this.y + this.height);
+                ctx.lineTo(this.x + this.width * 0.5, this.y + this.height + 15);
+                ctx.lineTo(this.x + this.width * 0.7, this.y + this.height);
+                ctx.closePath();
+                ctx.fill();
+            }
+        } else {
+            // Fallback if image fails to load
+            ctx.fillStyle = '#00ff00';
             ctx.beginPath();
-            ctx.moveTo(this.x + this.width * 0.3, this.y + this.height);
-            ctx.lineTo(this.x + this.width * 0.5, this.y + this.height + 15);
-            ctx.lineTo(this.x + this.width * 0.7, this.y + this.height);
+            ctx.moveTo(this.x + this.width/2, this.y);
+            ctx.lineTo(this.x + this.width, this.y + this.height);
+            ctx.lineTo(this.x, this.y + this.height);
             ctx.closePath();
             ctx.fill();
         }
@@ -107,12 +111,12 @@ class Enemy {
         this.width = 40;
         this.height = 40;
         this.speed = speed;
-        this.angle = 0;  // For rotation
+        this.angle = 0;
     }
 
     update() {
         this.y += this.speed;
-        this.angle += 0.1;  // Rotate enemy
+        this.angle += 0.1;
     }
 
     draw() {
@@ -120,20 +124,25 @@ class Enemy {
         ctx.translate(this.x + this.width/2, this.y + this.height/2);
         ctx.rotate(this.angle);
         
-        // Draw enemy as a colored diamond
-        ctx.fillStyle = difficulty ? DIFFICULTY_SETTINGS[difficulty].color : '#ff0000';
-        ctx.beginPath();
-        ctx.moveTo(0, -this.height/2);  // Top
-        ctx.lineTo(this.width/2, 0);    // Right
-        ctx.lineTo(0, this.height/2);   // Bottom
-        ctx.lineTo(-this.width/2, 0);   // Left
-        ctx.closePath();
-        ctx.fill();
-
-        // Add glow effect
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        if (enemyImage.complete) {
+            ctx.drawImage(
+                enemyImage, 
+                -this.width/2, 
+                -this.height/2, 
+                this.width, 
+                this.height
+            );
+        } else {
+            // Fallback if image fails to load
+            ctx.fillStyle = difficulty ? DIFFICULTY_SETTINGS[difficulty].color : '#ff0000';
+            ctx.beginPath();
+            ctx.moveTo(0, -this.height/2);
+            ctx.lineTo(this.width/2, 0);
+            ctx.lineTo(0, this.height/2);
+            ctx.lineTo(-this.width/2, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
         
         ctx.restore();
     }
