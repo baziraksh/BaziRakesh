@@ -5,34 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Space Shooter</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #000;
-            font-family: Arial, sans-serif;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
             overflow: hidden;
             position: fixed;
-            width: 100%;
-            height: 100%;
+            background-color: #000;
+            font-family: Arial, sans-serif;
         }
-        canvas {
-            border: 2px solid #333;
-            max-width: 100%;
-            max-height: 100vh;
-            touch-action: none;
-        }
+
         #gameContainer {
-            position: relative;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: #000;
         }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
         #menuScreen {
             position: absolute;
             top: 0;
@@ -44,57 +54,65 @@
             justify-content: center;
             align-items: center;
             background: rgba(0, 0, 20, 0.9);
+            z-index: 100;
         }
+
         .button {
-            padding: 15px 30px;
-            margin: 10px;
-            font-size: 18px;
+            padding: 20px 40px;
+            margin: 15px;
+            font-size: 24px;
             cursor: pointer;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             color: white;
             transition: all 0.3s ease;
             touch-action: manipulation;
+            min-width: 200px;
+            text-align: center;
         }
+
         #easy { background: #28a745; }
         #medium { background: #ffa500; }
         #hard { background: #dc3545; }
+
         .button:hover, .button:active {
             transform: scale(1.1);
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
         }
+
         #title {
             color: #fff;
-            font-size: 48px;
-            margin-bottom: 40px;
+            font-size: 60px;
+            margin-bottom: 50px;
             text-shadow: 0 0 10px #00f, 0 0 20px #00f, 0 0 30px #00f;
             text-align: center;
             padding: 0 20px;
+            white-space: nowrap;
         }
-        #soundToggle {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 5px;
-            z-index: 100;
-        }
-        #soundToggle:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
+
         @media (max-width: 768px) {
+            .button {
+                padding: 15px 30px;
+                font-size: 20px;
+                margin: 10px;
+                min-width: 160px;
+            }
+
             #title {
-                font-size: 36px;
+                font-size: 40px;
                 margin-bottom: 30px;
             }
+        }
+
+        @media (max-height: 600px) {
             .button {
-                padding: 12px 24px;
-                font-size: 16px;
+                padding: 10px 20px;
                 margin: 8px;
+            }
+
+            #title {
+                font-size: 32px;
+                margin-bottom: 20px;
             }
         }
     </style>
@@ -102,7 +120,6 @@
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
-        <button id="soundToggle">🔊</button>
         <div id="menuScreen">
             <h1 id="title">SPACE SHOOTER</h1>
             <button id="easy" class="button">EASY</button>
