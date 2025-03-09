@@ -310,7 +310,19 @@ function initGame() {
     score = 0;
     gameOver = false;
     gameStarted = true;
-    document.getElementById('menuScreen').style.display = 'none';
+    
+    // Make sure menu is hidden
+    const menuScreen = document.getElementById('menuScreen');
+    if (menuScreen) {
+        menuScreen.style.display = 'none';
+    }
+
+    // Make sure canvas is visible
+    canvas.style.display = 'block';
+    
+    // Resize canvas to ensure proper dimensions
+    resizeCanvas();
+
     playSound('background');
 }
 
@@ -430,16 +442,19 @@ function gameLoop() {
 document.getElementById('easy').addEventListener('click', () => {
     difficulty = 'EASY';
     initGame();
+    console.log('Easy mode selected'); // Debug log
 });
 
 document.getElementById('medium').addEventListener('click', () => {
     difficulty = 'MEDIUM';
     initGame();
+    console.log('Medium mode selected'); // Debug log
 });
 
 document.getElementById('hard').addEventListener('click', () => {
     difficulty = 'HARD';
     initGame();
+    console.log('Hard mode selected'); // Debug log
 });
 
 canvas.addEventListener('mousemove', (e) => {
@@ -451,7 +466,10 @@ canvas.addEventListener('mousemove', (e) => {
 
 canvas.addEventListener('click', (e) => {
     if (gameOver) {
-        document.getElementById('menuScreen').style.display = 'flex';
+        const menuScreen = document.getElementById('menuScreen');
+        if (menuScreen) {
+            menuScreen.style.display = 'flex';
+        }
         gameStarted = false;
         return;
     }
