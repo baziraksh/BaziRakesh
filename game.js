@@ -9,6 +9,10 @@ let gameOver = false;
 let score = 0;
 let difficulty = null;
 
+// Scale factors for responsive design
+let scaleX = 1;
+let scaleY = 1;
+
 // Game objects
 let player;
 let enemies = [];
@@ -40,8 +44,23 @@ const DIFFICULTY_SETTINGS = {
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = GAME_WIDTH;
-canvas.height = GAME_HEIGHT;
+
+// Handle window resize
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    scaleX = canvas.width / GAME_WIDTH;
+    scaleY = canvas.height / GAME_HEIGHT;
+    
+    // Update game objects positions if needed
+    if (player) {
+        player.y = canvas.height - 100;
+    }
+}
+
+// Initial resize
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // Load images
 const playerImage = new Image();
@@ -119,20 +138,25 @@ class Player {
     }
 
     draw() {
+        const scaledX = this.x * scaleX;
+        const scaledY = this.y * scaleY;
+        const scaledWidth = this.width * scaleX;
+        const scaledHeight = this.height * scaleY;
+
         if (playerImage.complete) {
-            ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
+            ctx.drawImage(playerImage, scaledX, scaledY, scaledWidth, scaledHeight);
         } else {
             ctx.fillStyle = '#00ff00';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
         }
     }
 
     getBounds() {
         return {
-            x: this.x,
-            y: this.y,
-            width: this.width,
-            height: this.height
+            x: this.x * scaleX,
+            y: this.y * scaleY,
+            width: this.width * scaleX,
+            height: this.height * scaleY
         };
     }
 }
@@ -151,20 +175,25 @@ class Enemy {
     }
 
     draw() {
+        const scaledX = this.x * scaleX;
+        const scaledY = this.y * scaleY;
+        const scaledWidth = this.width * scaleX;
+        const scaledHeight = this.height * scaleY;
+
         if (enemyImage.complete) {
-            ctx.drawImage(enemyImage, this.x, this.y, this.width, this.height);
+            ctx.drawImage(enemyImage, scaledX, scaledY, scaledWidth, scaledHeight);
         } else {
             ctx.fillStyle = difficulty ? DIFFICULTY_SETTINGS[difficulty].color : '#ff0000';
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
         }
     }
 
     getBounds() {
         return {
-            x: this.x,
-            y: this.y,
-            width: this.width,
-            height: this.height
+            x: this.x * scaleX,
+            y: this.y * scaleY,
+            width: this.width * scaleX,
+            height: this.height * scaleY
         };
     }
 
@@ -204,8 +233,13 @@ class Projectile {
     }
 
     draw() {
+        const scaledX = this.x * scaleX;
+        const scaledY = this.y * scaleY;
+        const scaledWidth = this.width * scaleX;
+        const scaledHeight = this.height * scaleY;
+
         if (projectileImage.complete) {
-            ctx.drawImage(projectileImage, this.x - this.width/2, this.y, this.width, this.height);
+            ctx.drawImage(projectileImage, scaledX - scaledWidth/2, scaledY, scaledWidth, scaledHeight);
             
             // Add glowing trail effect
             ctx.save();
@@ -213,25 +247,25 @@ class Projectile {
             for (let i = 0; i < 3; i++) {
                 ctx.globalAlpha = 0.2 - (i * 0.05);
                 ctx.drawImage(projectileImage, 
-                    this.x - this.width/2,
-                    this.y + (i * 10),
-                    this.width,
-                    this.height
+                    scaledX - scaledWidth/2,
+                    scaledY + (i * 10 * scaleY),
+                    scaledWidth,
+                    scaledHeight
                 );
             }
             ctx.restore();
         } else {
             ctx.fillStyle = '#ffff00';
-            ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height);
+            ctx.fillRect(scaledX - scaledWidth/2, scaledY, scaledWidth, scaledHeight);
         }
     }
 
     getBounds() {
         return {
-            x: this.x - this.width/2,
-            y: this.y,
-            width: this.width,
-            height: this.height
+            x: (this.x - this.width/2) * scaleX,
+            y: this.y * scaleY,
+            width: this.width * scaleX,
+            height: this.height * scaleY
         };
     }
 }
@@ -350,7 +384,7 @@ function update() {
 
 function draw() {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw stars
     stars.forEach(star => star.draw());
@@ -361,23 +395,23 @@ function draw() {
         enemies.forEach(e => e.draw());
         projectiles.forEach(p => p.draw());
 
-        // Draw score
+        // Draw score with scaled font size
         ctx.fillStyle = '#fff';
-        ctx.font = '20px Arial';
-        ctx.fillText(`Score: ${score}`, 10, 30);
-        ctx.fillText(`Difficulty: ${difficulty}`, 10, 60);
+        ctx.font = `${20 * Math.min(scaleX, scaleY)}px Arial`;
+        ctx.fillText(`Score: ${score}`, 10 * scaleX, 30 * scaleY);
+        ctx.fillText(`Difficulty: ${difficulty}`, 10 * scaleX, 60 * scaleY);
 
         if (gameOver) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             ctx.fillStyle = '#fff';
-            ctx.font = '48px Arial';
+            ctx.font = `${48 * Math.min(scaleX, scaleY)}px Arial`;
             ctx.textAlign = 'center';
-            ctx.fillText('Game Over!', GAME_WIDTH/2, GAME_HEIGHT/2);
-            ctx.font = '24px Arial';
-            ctx.fillText(`Final Score: ${score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 50);
-            ctx.fillText('Click to play again', GAME_WIDTH/2, GAME_HEIGHT/2 + 100);
+            ctx.fillText('Game Over!', canvas.width/2, canvas.height/2);
+            ctx.font = `${24 * Math.min(scaleX, scaleY)}px Arial`;
+            ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 50 * scaleY);
+            ctx.fillText('Click to play again', canvas.width/2, canvas.height/2 + 100 * scaleY);
             ctx.textAlign = 'left';
         }
     }
@@ -434,7 +468,7 @@ canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    touchX = (touch.clientX - rect.left) / scaleX;
     player.x = touchX - player.width/2;
     isShooting = true;
 });
@@ -443,7 +477,7 @@ canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    touchX = (touch.clientX - rect.left) / scaleX;
     player.x = touchX - player.width/2;
 });
 
