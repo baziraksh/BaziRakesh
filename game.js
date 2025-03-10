@@ -4,6 +4,12 @@ const GAME_HEIGHT = 600;
 const PLAYER_SPEED = 8;
 const SHOOT_DELAY = 200; // Slightly faster shooting
 
+// Visual effects constants
+const PARTICLE_COUNT = 15;
+const STAR_COUNT = 100;
+const SCREEN_SHAKE_AMOUNT = 5;
+const SCREEN_SHAKE_DURATION = 200;
+
 // Game state
 let gameStarted = false;
 let gameOver = false;
@@ -11,6 +17,7 @@ let score = 0;
 let difficulty = null;
 let lastShootTime = 0;
 let isMoving = false;
+let screenShake = { amount: 0, duration: 0 };
 
 // Load images
 const playerImage = new Image();
@@ -23,6 +30,7 @@ let player;
 let enemies = [];
 let projectiles = [];
 let stars = [];
+let particles = [];
 
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
@@ -69,21 +77,51 @@ class Player {
     }
 
     draw() {
+        ctx.save();
+        
+        // Apply screen shake
+        if (screenShake.duration > 0) {
+            ctx.translate(
+                Math.random() * screenShake.amount - screenShake.amount/2,
+                Math.random() * screenShake.amount - screenShake.amount/2
+            );
+        }
+        
         if (playerImage.complete) {
             ctx.drawImage(playerImage, this.x, this.y, this.width, this.height);
             
-            // Add thruster effect when moving
+            // Enhanced thruster effect when moving
             if (isMoving) {
-                ctx.fillStyle = '#ff6600';
+                const gradient = ctx.createLinearGradient(
+                    this.x + this.width * 0.3,
+                    this.y + this.height,
+                    this.x + this.width * 0.5,
+                    this.y + this.height + 30
+                );
+                gradient.addColorStop(0, '#ff6600');
+                gradient.addColorStop(1, 'rgba(255, 102, 0, 0)');
+                
+                ctx.fillStyle = gradient;
                 ctx.beginPath();
                 ctx.moveTo(this.x + this.width * 0.3, this.y + this.height);
-                ctx.lineTo(this.x + this.width * 0.5, this.y + this.height + 15);
+                ctx.lineTo(this.x + this.width * 0.5, this.y + this.height + 30);
                 ctx.lineTo(this.x + this.width * 0.7, this.y + this.height);
                 ctx.closePath();
                 ctx.fill();
+                
+                // Add thruster particles
+                if (Math.random() < 0.3) {
+                    particles.push(new Particle(
+                        this.x + this.width * 0.5,
+                        this.y + this.height,
+                        '#ff6600',
+                        2,
+                        1
+                    ));
+                }
             }
         } else {
-            // Fallback if image fails to load
+            // Fallback shape
             ctx.fillStyle = '#00ff00';
             ctx.beginPath();
             ctx.moveTo(this.x + this.width/2, this.y);
@@ -92,6 +130,8 @@ class Player {
             ctx.closePath();
             ctx.fill();
         }
+        
+        ctx.restore();
     }
 
     getBounds() {
@@ -225,14 +265,79 @@ const DIFFICULTY_SETTINGS = {
     }
 };
 
+// Particle class for explosions and effects
+class Particle {
+    constructor(x, y, color, speed = 3, size = 2) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.size = size;
+        this.alpha = 1;
+        this.angle = Math.random() * Math.PI * 2;
+        this.speed = speed * (Math.random() + 0.5);
+        this.decay = 0.02;
+    }
+
+    update() {
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+        this.alpha -= this.decay;
+        return this.alpha > 0;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// Star class for background
+class Star {
+    constructor() {
+        this.reset();
+        this.y = Math.random() * GAME_HEIGHT;
+    }
+
+    reset() {
+        this.x = Math.random() * GAME_WIDTH;
+        this.y = 0;
+        this.speed = Math.random() * 2 + 1;
+        this.size = Math.random() * 2 + 1;
+        this.brightness = Math.random() * 0.5 + 0.5;
+    }
+
+    update() {
+        this.y += this.speed;
+        if (this.y > GAME_HEIGHT) {
+            this.reset();
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.brightness})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
 // Game functions
 function initGame() {
     player = new Player(GAME_WIDTH / 2 - 25, GAME_HEIGHT - 100);
     enemies = [];
     projectiles = [];
+    particles = [];
     score = 0;
     gameOver = false;
     gameStarted = true;
+    initStars();
     
     // Hide menu
     const menuScreen = document.getElementById('menuScreen');
@@ -365,12 +470,39 @@ document.getElementById('hard').addEventListener('click', () => {
     initGame();
 });
 
+// Function to create explosion effect
+function createExplosion(x, y, color) {
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push(new Particle(x, y, color));
+    }
+    screenShake = {
+        amount: SCREEN_SHAKE_AMOUNT,
+        duration: SCREEN_SHAKE_DURATION
+    };
+}
+
+// Initialize stars
+function initStars() {
+    stars = [];
+    for (let i = 0; i < STAR_COUNT; i++) {
+        stars.push(new Star());
+    }
+}
+
 function checkCollisions() {
     for (let i = projectiles.length - 1; i >= 0; i--) {
         for (let j = enemies.length - 1; j >= 0; j--) {
             if (isColliding(projectiles[i].getBounds(), enemies[j].getBounds())) {
-                projectiles.splice(i, 1);
+                // Create explosion at enemy position
+                createExplosion(
+                    enemies[j].x + enemies[j].width/2,
+                    enemies[j].y + enemies[j].height/2,
+                    DIFFICULTY_SETTINGS[difficulty].color
+                );
+                
+                // Remove enemy and projectile
                 enemies.splice(j, 1);
+                projectiles.splice(i, 1);
                 score += 10 * DIFFICULTY_SETTINGS[difficulty].scoreMultiplier;
                 playSound('explosion');
                 break;
@@ -378,12 +510,17 @@ function checkCollisions() {
         }
     }
 
-    if (enemies.some(enemy => isColliding(player.getBounds(), enemy.getBounds()))) {
-        playSound('gameOver');
-        gameOver = true;
-        if (sounds.background) {
-            sounds.background.pause();
-            sounds.background.currentTime = 0;
+    // Check for collisions between player and enemies
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        if (isColliding(player.getBounds(), enemies[i].getBounds())) {
+            createExplosion(
+                player.x + player.width/2,
+                player.y + player.height/2,
+                '#ffffff'
+            );
+            gameOver = true;
+            playSound('gameOver');
+            break;
         }
     }
 }
@@ -398,76 +535,77 @@ function isColliding(rect1, rect2) {
 function update() {
     if (!gameStarted || gameOver) return;
 
-    player.update();
-    
-    // Auto-fire while moving
-    if (isMoving && Date.now() - lastShootTime > SHOOT_DELAY) {
-        projectiles.push(new Projectile(player.x + player.width/2, player.y));
-        playSound('shoot');
-        lastShootTime = Date.now();
+    // Update screen shake
+    if (screenShake.duration > 0) {
+        screenShake.duration -= 16; // Assuming 60fps
     }
 
-    // Update projectiles and remove ones that are off screen
-    projectiles = projectiles.filter(p => p.y > -p.height);
-    projectiles.forEach(p => p.update());
+    // Update game objects
+    player.update();
+    
+    // Update projectiles
+    projectiles = projectiles.filter(projectile => {
+        projectile.update();
+        return projectile.y + projectile.height > 0;
+    });
 
-    // Update enemies and remove ones that are off screen
-    enemies = enemies.filter(e => e.y < GAME_HEIGHT);
-    enemies.forEach(e => e.update());
+    // Update enemies
+    enemies = enemies.filter(enemy => {
+        enemy.update();
+        return enemy.y < GAME_HEIGHT;
+    });
 
-    // Spawn new enemies
+    // Update particles
+    particles = particles.filter(particle => particle.update());
+
+    // Update stars
+    stars.forEach(star => star.update());
+
+    // Spawn enemies
     if (Math.random() < DIFFICULTY_SETTINGS[difficulty].enemySpawnChance) {
-        enemies.push(new Enemy(
-            Math.random() * (GAME_WIDTH - 40),
-            -40,  // Start above the screen
-            DIFFICULTY_SETTINGS[difficulty].enemySpeed
-        ));
+        const x = Math.random() * (GAME_WIDTH - 40);
+        enemies.push(new Enemy(x, -40, DIFFICULTY_SETTINGS[difficulty].enemySpeed));
     }
 
     checkCollisions();
-
-    // Game over if enemy reaches bottom
-    if (enemies.some(e => e.y > GAME_HEIGHT)) {
-        playSound('gameOver');
-        gameOver = true;
-        if (sounds.background) {
-            sounds.background.pause();
-            sounds.background.currentTime = 0;
-        }
-    }
 }
 
 function draw() {
-    // Clear screen
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = '#000033';
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    if (gameStarted) {
-        // Draw game objects
-        player.draw();
-        enemies.forEach(e => e.draw());
-        projectiles.forEach(p => p.draw());
+    // Draw stars
+    stars.forEach(star => star.draw());
 
-        // Draw score
-        ctx.fillStyle = '#fff';
-        ctx.font = '20px Arial';
-        ctx.fillText(`Score: ${score}`, 10, 30);
-        ctx.fillText(`Difficulty: ${difficulty}`, 10, 60);
+    if (!gameStarted) return;
 
-        // Draw game over screen
-        if (gameOver) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-            
-            ctx.fillStyle = '#fff';
-            ctx.font = '48px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Game Over!', GAME_WIDTH/2, GAME_HEIGHT/2);
-            ctx.font = '24px Arial';
-            ctx.fillText(`Final Score: ${score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 50);
-            ctx.fillText('Click to play again', GAME_WIDTH/2, GAME_HEIGHT/2 + 100);
-            ctx.textAlign = 'left';
-        }
+    // Draw particles behind everything else
+    particles.forEach(particle => particle.draw());
+
+    // Draw game objects
+    projectiles.forEach(projectile => projectile.draw());
+    enemies.forEach(enemy => enemy.draw());
+    player.draw();
+
+    // Draw score
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '24px Arial';
+    ctx.fillText(`Score: ${score}`, 10, 30);
+
+    if (gameOver) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over!', GAME_WIDTH/2, GAME_HEIGHT/2 - 50);
+        
+        ctx.font = '24px Arial';
+        ctx.fillText(`Final Score: ${score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 10);
+        ctx.fillText('Click to Play Again', GAME_WIDTH/2, GAME_HEIGHT/2 + 50);
+        
+        ctx.textAlign = 'left';
     }
 }
 
