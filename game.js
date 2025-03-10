@@ -128,8 +128,8 @@ class Player {
             );
         }
         
-        // Draw health bar on right side for both players
-        if (this.isAlive) {
+        // Only draw health bars and labels in multiplayer mode
+        if (this.isAlive && isMultiplayer) {
             const healthBarWidth = 150;
             const healthBarHeight = 10;
             const healthPercentage = this.health / 100;
@@ -588,21 +588,43 @@ document.addEventListener('keyup', (e) => {
     }
 });
 
-// Add multiplayer button listener
-document.getElementById('multiplayer').addEventListener('click', () => {
-    isMultiplayer = true;
-    difficulty = 'MEDIUM';
-    score = 0;
-    player2Score = 0;
-    initGame();
-    startShooting();
+// Add back button listener
+document.getElementById('backButton').addEventListener('click', () => {
+    const difficultyButtons = document.getElementById('difficultyButtons');
+    const singlePlayerBtn = document.getElementById('singlePlayer');
+    const multiplayerBtn = document.getElementById('multiplayer');
+    const gameTitle = document.getElementById('gameTitle');
+    
+    // Hide difficulty buttons
+    difficultyButtons.style.display = 'none';
+    
+    // Show main menu buttons and title
+    singlePlayerBtn.style.display = 'block';
+    multiplayerBtn.style.display = 'block';
+    gameTitle.style.display = 'block';
 });
 
-// Add difficulty button listeners
+// Add single player button listener
+document.getElementById('singlePlayer').addEventListener('click', () => {
+    const difficultyButtons = document.getElementById('difficultyButtons');
+    const singlePlayerBtn = document.getElementById('singlePlayer');
+    const multiplayerBtn = document.getElementById('multiplayer');
+    const gameTitle = document.getElementById('gameTitle');
+    
+    // Hide main menu buttons
+    singlePlayerBtn.style.display = 'none';
+    multiplayerBtn.style.display = 'none';
+    
+    // Show difficulty buttons
+    difficultyButtons.style.display = 'flex';
+});
+
+// Update difficulty button listeners
 document.getElementById('easy').addEventListener('click', () => {
     isMultiplayer = false;
     difficulty = 'EASY';
     score = 0;
+    document.getElementById('difficultyButtons').style.display = 'none';
     initGame();
     startShooting();
 });
@@ -611,6 +633,7 @@ document.getElementById('medium').addEventListener('click', () => {
     isMultiplayer = false;
     difficulty = 'MEDIUM';
     score = 0;
+    document.getElementById('difficultyButtons').style.display = 'none';
     initGame();
     startShooting();
 });
@@ -619,16 +642,80 @@ document.getElementById('hard').addEventListener('click', () => {
     isMultiplayer = false;
     difficulty = 'HARD';
     score = 0;
+    document.getElementById('difficultyButtons').style.display = 'none';
     initGame();
     startShooting();
 });
 
+// Update multiplayer button listener
+document.getElementById('multiplayer').addEventListener('click', () => {
+    isMultiplayer = true;
+    difficulty = 'MEDIUM';
+    score = 0;
+    player2Score = 0;
+    document.getElementById('difficultyButtons').style.display = 'none';
+    initGame();
+    startShooting();
+});
+
+// Add touch controls after the keyboard controls
+let touchStartX = 0;
+let touchStartY = 0;
+let activePlayer = null;
+
+canvas.addEventListener('touchstart', (e) => {
+    if (!gameStarted || gameOver) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    touchStartX = touch.clientX - rect.left;
+    touchStartY = touch.clientY - rect.top;
+    isMoving = true;
+
+    // Determine which player to control based on touch position
+    if (isMultiplayer) {
+        const touchY = touchStartY * (GAME_HEIGHT / canvas.clientHeight);
+        if (touchY < GAME_HEIGHT / 2) {
+            activePlayer = player2; // Top half controls Player 2
+        } else {
+            activePlayer = player; // Bottom half controls Player 1
+        }
+    } else {
+        activePlayer = player;
+    }
+    startShooting();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!gameStarted || gameOver || !activePlayer) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const currentX = touch.clientX - rect.left;
+    const deltaX = currentX - touchStartX;
+    touchStartX = currentX;
+    
+    // Move only the active player
+    activePlayer.x += deltaX * (GAME_WIDTH / canvas.clientWidth);
+    if (activePlayer.x < 0) activePlayer.x = 0;
+    if (activePlayer.x > GAME_WIDTH - activePlayer.width) activePlayer.x = GAME_WIDTH - activePlayer.width;
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    if (!gameStarted || gameOver) return;
+    e.preventDefault();
+    isMoving = false;
+    activePlayer = null;
+    stopShooting();
+}, { passive: false });
+
+// Update startShooting function to only shoot for the active player
 function startShooting() {
     isShooting = true;
     if (shootInterval) clearInterval(shootInterval);
     shootInterval = setInterval(() => {
-        if (player && !gameOver && gameStarted) {
-            player.shoot();
+        if (activePlayer && !gameOver && gameStarted) {
+            activePlayer.shoot();
         }
     }, SHOOT_DELAY);
 }
@@ -920,54 +1007,23 @@ function gameLoop(currentTime) {
     }
 }
 
-// Add touch controls after the keyboard controls
-let touchStartX = 0;
-
-canvas.addEventListener('touchstart', (e) => {
-    if (!gameStarted || gameOver) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    touchStartX = touch.clientX - rect.left;
-    isMoving = true;
-    startShooting();
-}, { passive: false });
-
-canvas.addEventListener('touchmove', (e) => {
-    if (!gameStarted || gameOver) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const currentX = touch.clientX - rect.left;
-    const deltaX = currentX - touchStartX;
-    touchStartX = currentX;
-    
-    if (player) {
-        player.x += deltaX * (GAME_WIDTH / canvas.clientWidth);
-        if (player.x < 0) player.x = 0;
-        if (player.x > GAME_WIDTH - player.width) player.x = GAME_WIDTH - player.width;
-    }
-    
-    if (player2 && isMultiplayer) {
-        player2.x += deltaX * (GAME_WIDTH / canvas.clientWidth);
-        if (player2.x < 0) player2.x = 0;
-        if (player2.x > GAME_WIDTH - player2.width) player2.x = GAME_WIDTH - player2.width;
-    }
-}, { passive: false });
-
-canvas.addEventListener('touchend', (e) => {
-    if (!gameStarted || gameOver) return;
-    e.preventDefault();
-    isMoving = false;
-    stopShooting();
-}, { passive: false });
-
-// Add click handler for game over screen
+// Update click handler for game over screen
 canvas.addEventListener('click', () => {
     if (gameOver) {
         const menuScreen = document.getElementById('menuScreen');
+        const singlePlayerBtn = document.getElementById('singlePlayer');
+        const multiplayerBtn = document.getElementById('multiplayer');
+        const difficultyButtons = document.getElementById('difficultyButtons');
+        const gameTitle = document.getElementById('gameTitle');
+        
         if (menuScreen) {
             menuScreen.style.display = 'flex';
+            // Show main menu buttons and title
+            singlePlayerBtn.style.display = 'block';
+            multiplayerBtn.style.display = 'block';
+            gameTitle.style.display = 'block';
+            // Hide difficulty buttons
+            difficultyButtons.style.display = 'none';
         }
         gameOver = false;
         gameStarted = false;
