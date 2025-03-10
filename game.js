@@ -29,6 +29,8 @@ let lastFrameTime = 0;
 let animationFrameId = null;
 let isMultiplayer = false;
 let player2Score = 0;
+let isShooting = false;
+let shootInterval = null;
 
 // Load images
 const playerImage = new Image();
@@ -590,27 +592,54 @@ document.addEventListener('keyup', (e) => {
 document.getElementById('multiplayer').addEventListener('click', () => {
     isMultiplayer = true;
     difficulty = 'MEDIUM';
+    score = 0;
+    player2Score = 0;
     initGame();
+    startShooting();
 });
 
 // Add difficulty button listeners
 document.getElementById('easy').addEventListener('click', () => {
     isMultiplayer = false;
     difficulty = 'EASY';
+    score = 0;
     initGame();
+    startShooting();
 });
 
 document.getElementById('medium').addEventListener('click', () => {
     isMultiplayer = false;
     difficulty = 'MEDIUM';
+    score = 0;
     initGame();
+    startShooting();
 });
 
 document.getElementById('hard').addEventListener('click', () => {
     isMultiplayer = false;
     difficulty = 'HARD';
+    score = 0;
     initGame();
+    startShooting();
 });
+
+function startShooting() {
+    isShooting = true;
+    if (shootInterval) clearInterval(shootInterval);
+    shootInterval = setInterval(() => {
+        if (player && !gameOver && gameStarted) {
+            player.shoot();
+        }
+    }, SHOOT_DELAY);
+}
+
+function stopShooting() {
+    isShooting = false;
+    if (shootInterval) {
+        clearInterval(shootInterval);
+        shootInterval = null;
+    }
+}
 
 // Function to create explosion effect
 function createExplosion(x, y, color) {
@@ -632,8 +661,8 @@ function initStars() {
 }
 
 function checkCollisions() {
-    // Check projectile collisions with players in multiplayer
     if (isMultiplayer) {
+        // Check projectile collisions with players in multiplayer
         for (let i = projectiles.length - 1; i >= 0; i--) {
             const projectile = projectiles[i];
             
@@ -662,17 +691,7 @@ function checkCollisions() {
             gameOver = true;
         }
     } else {
-        // Check powerup collisions for both players
-        for (let i = powerups.length - 1; i >= 0; i--) {
-            if (player && isColliding(player.getBounds(), powerups[i].getBounds())) {
-                activatePowerup(player, powerups[i]);
-            }
-            if (player2 && isColliding(player2.getBounds(), powerups[i].getBounds())) {
-                activatePowerup(player2, powerups[i]);
-            }
-        }
-
-        // Check projectile collisions
+        // Check projectile collisions with enemies
         for (let i = projectiles.length - 1; i >= 0; i--) {
             for (let j = enemies.length - 1; j >= 0; j--) {
                 if (isColliding(projectiles[i].getBounds(), enemies[j].getBounds())) {
@@ -682,10 +701,7 @@ function checkCollisions() {
                         projectiles[i].isSpecial ? '#ff00ff' : DIFFICULTY_SETTINGS[difficulty].color
                     );
                     
-                    // Award points to the player who shot the enemy
-                    if (projectiles[i].player) {
-                        projectiles[i].player.score += 10 * DIFFICULTY_SETTINGS[difficulty].scoreMultiplier;
-                    }
+                    score += 10 * DIFFICULTY_SETTINGS[difficulty].scoreMultiplier;
                     
                     enemies.splice(j, 1);
                     projectiles.splice(i, 1);
@@ -695,13 +711,10 @@ function checkCollisions() {
             }
         }
 
-        // Check enemy collisions with both players
+        // Check enemy collisions with player
         for (let i = enemies.length - 1; i >= 0; i--) {
             if (player && isColliding(player.getBounds(), enemies[i].getBounds())) {
                 handlePlayerCollision(player, enemies[i]);
-            }
-            if (player2 && isColliding(player2.getBounds(), enemies[i].getBounds())) {
-                handlePlayerCollision(player2, enemies[i]);
             }
         }
     }
@@ -914,28 +927,29 @@ canvas.addEventListener('touchstart', (e) => {
     if (!gameStarted || gameOver) return;
     e.preventDefault();
     const touch = e.touches[0];
-    touchStartX = touch.clientX;
+    const rect = canvas.getBoundingClientRect();
+    touchStartX = touch.clientX - rect.left;
     isMoving = true;
-    
-    if (player) player.shoot();
-    if (player2 && isMultiplayer) player2.shoot();
+    startShooting();
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
     if (!gameStarted || gameOver) return;
     e.preventDefault();
     const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartX;
-    touchStartX = touch.clientX;
+    const rect = canvas.getBoundingClientRect();
+    const currentX = touch.clientX - rect.left;
+    const deltaX = currentX - touchStartX;
+    touchStartX = currentX;
     
     if (player) {
-        player.x += deltaX;
+        player.x += deltaX * (GAME_WIDTH / canvas.clientWidth);
         if (player.x < 0) player.x = 0;
         if (player.x > GAME_WIDTH - player.width) player.x = GAME_WIDTH - player.width;
     }
     
     if (player2 && isMultiplayer) {
-        player2.x += deltaX;
+        player2.x += deltaX * (GAME_WIDTH / canvas.clientWidth);
         if (player2.x < 0) player2.x = 0;
         if (player2.x > GAME_WIDTH - player2.width) player2.x = GAME_WIDTH - player2.width;
     }
@@ -945,6 +959,7 @@ canvas.addEventListener('touchend', (e) => {
     if (!gameStarted || gameOver) return;
     e.preventDefault();
     isMoving = false;
+    stopShooting();
 }, { passive: false });
 
 // Add click handler for game over screen
