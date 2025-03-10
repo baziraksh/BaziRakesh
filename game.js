@@ -593,6 +593,25 @@ document.getElementById('multiplayer').addEventListener('click', () => {
     initGame();
 });
 
+// Add difficulty button listeners
+document.getElementById('easy').addEventListener('click', () => {
+    isMultiplayer = false;
+    difficulty = 'EASY';
+    initGame();
+});
+
+document.getElementById('medium').addEventListener('click', () => {
+    isMultiplayer = false;
+    difficulty = 'MEDIUM';
+    initGame();
+});
+
+document.getElementById('hard').addEventListener('click', () => {
+    isMultiplayer = false;
+    difficulty = 'HARD';
+    initGame();
+});
+
 // Function to create explosion effect
 function createExplosion(x, y, color) {
     for (let i = 0; i < PARTICLE_COUNT; i++) {
