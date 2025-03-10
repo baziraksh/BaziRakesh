@@ -1014,27 +1014,78 @@ function draw() {
         }
 
         if (gameOver) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            // Create a more appealing gradient background with lighter colors
+            const gradient = ctx.createRadialGradient(
+                GAME_WIDTH/2, GAME_HEIGHT/2, 0,
+                GAME_WIDTH/2, GAME_HEIGHT/2, GAME_HEIGHT
+            );
+            gradient.addColorStop(0, 'rgba(0, 153, 255, 0.1)');  // Light blue center
+            gradient.addColorStop(0.5, 'rgba(0, 51, 102, 0.2)'); // Medium blue middle
+            gradient.addColorStop(1, 'rgba(0, 0, 51, 0.3)');     // Dark blue edge
+            ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             
+            // Add outer glow effect
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 30;
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(20, 20, GAME_WIDTH - 40, GAME_HEIGHT - 40);
+            
+            // Enhanced text effects
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 20;
             ctx.fillStyle = '#ffffff';
-            ctx.font = '48px Arial';
+            ctx.font = 'bold 48px Arial';
             ctx.textAlign = 'center';
             
             if (isMultiplayer) {
+                // Game Over text with gradient
+                const gameOverGradient = ctx.createLinearGradient(
+                    GAME_WIDTH/2 - 100, GAME_HEIGHT/2 - 80,
+                    GAME_WIDTH/2 + 100, GAME_HEIGHT/2 - 80
+                );
+                gameOverGradient.addColorStop(0, '#4df');
+                gameOverGradient.addColorStop(0.5, '#fff');
+                gameOverGradient.addColorStop(1, '#4df');
+                ctx.fillStyle = gameOverGradient;
                 ctx.fillText('Game Over!', GAME_WIDTH/2, GAME_HEIGHT/2 - 80);
-                ctx.font = '24px Arial';
+                
+                ctx.font = 'bold 24px Arial';
+                ctx.fillStyle = '#ffffff';
                 let winner = "It's a Tie!";
                 if (!player.isAlive && player2.isAlive) winner = "Player 2 Wins!";
                 if (player.isAlive && !player2.isAlive) winner = "Player 1 Wins!";
                 ctx.fillText(winner, GAME_WIDTH/2, GAME_HEIGHT/2);
             } else {
+                // Game Over text with gradient
+                const gameOverGradient = ctx.createLinearGradient(
+                    GAME_WIDTH/2 - 100, GAME_HEIGHT/2 - 50,
+                    GAME_WIDTH/2 + 100, GAME_HEIGHT/2 - 50
+                );
+                gameOverGradient.addColorStop(0, '#4df');
+                gameOverGradient.addColorStop(0.5, '#fff');
+                gameOverGradient.addColorStop(1, '#4df');
+                ctx.fillStyle = gameOverGradient;
                 ctx.fillText('Game Over!', GAME_WIDTH/2, GAME_HEIGHT/2 - 50);
-                ctx.font = '24px Arial';
+                
+                ctx.font = 'bold 24px Arial';
+                ctx.fillStyle = '#ffffff';
                 ctx.fillText(`Final Score: ${score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 10);
             }
             
+            // Enhanced pulsing effect for "Click to Play Again"
+            const pulseAmount = Math.sin(Date.now() * 0.005) * 0.2 + 0.8;
+            ctx.globalAlpha = pulseAmount;
+            ctx.fillStyle = '#4df';
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 15;
+            ctx.font = 'bold 24px Arial';
             ctx.fillText('Click to Play Again', GAME_WIDTH/2, GAME_HEIGHT/2 + 100);
+            
+            // Reset canvas properties
+            ctx.globalAlpha = 1.0;
+            ctx.shadowBlur = 0;
             ctx.textAlign = 'left';
         }
     } catch (error) {
