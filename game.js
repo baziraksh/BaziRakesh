@@ -662,60 +662,103 @@ document.getElementById('multiplayer').addEventListener('click', () => {
 let touchStartX = 0;
 let touchStartY = 0;
 let activePlayer = null;
+let touchIdentifiers = new Map(); // Store touch identifiers for each player
 
 canvas.addEventListener('touchstart', (e) => {
     if (!gameStarted || gameOver) return;
     e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    touchStartX = touch.clientX - rect.left;
-    touchStartY = touch.clientY - rect.top;
-    isMoving = true;
+    
+    Array.from(e.changedTouches).forEach(touch => {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+        const gameY = touchY * (GAME_HEIGHT / canvas.clientHeight);
 
-    // Determine which player to control based on touch position
-    if (isMultiplayer) {
-        const touchY = touchStartY * (GAME_HEIGHT / canvas.clientHeight);
-        if (touchY < GAME_HEIGHT / 2) {
-            activePlayer = player2; // Top half controls Player 2
+        // Determine which player to control based on touch position
+        let playerForTouch = null;
+        if (isMultiplayer) {
+            if (gameY < GAME_HEIGHT / 2) {
+                playerForTouch = player2; // Top half controls Player 2
+            } else {
+                playerForTouch = player; // Bottom half controls Player 1
+            }
         } else {
-            activePlayer = player; // Bottom half controls Player 1
+            playerForTouch = player;
         }
-    } else {
-        activePlayer = player;
-    }
-    startShooting();
+
+        if (playerForTouch) {
+            touchIdentifiers.set(touch.identifier, {
+                player: playerForTouch,
+                startX: touchX,
+                lastX: touchX
+            });
+            isMoving = true;
+            startShooting();
+        }
+    });
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
-    if (!gameStarted || gameOver || !activePlayer) return;
+    if (!gameStarted || gameOver) return;
     e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const currentX = touch.clientX - rect.left;
-    const deltaX = currentX - touchStartX;
-    touchStartX = currentX;
-    
-    // Move only the active player
-    activePlayer.x += deltaX * (GAME_WIDTH / canvas.clientWidth);
-    if (activePlayer.x < 0) activePlayer.x = 0;
-    if (activePlayer.x > GAME_WIDTH - activePlayer.width) activePlayer.x = GAME_WIDTH - activePlayer.width;
+
+    Array.from(e.changedTouches).forEach(touch => {
+        const touchData = touchIdentifiers.get(touch.identifier);
+        if (touchData) {
+            const rect = canvas.getBoundingClientRect();
+            const currentX = touch.clientX - rect.left;
+            const deltaX = currentX - touchData.lastX;
+            
+            // Update player position
+            touchData.player.x += deltaX * (GAME_WIDTH / canvas.clientWidth);
+            if (touchData.player.x < 0) touchData.player.x = 0;
+            if (touchData.player.x > GAME_WIDTH - touchData.player.width) {
+                touchData.player.x = GAME_WIDTH - touchData.player.width;
+            }
+
+            // Update last X position
+            touchData.lastX = currentX;
+        }
+    });
 }, { passive: false });
 
 canvas.addEventListener('touchend', (e) => {
     if (!gameStarted || gameOver) return;
     e.preventDefault();
-    isMoving = false;
-    activePlayer = null;
-    stopShooting();
+
+    Array.from(e.changedTouches).forEach(touch => {
+        touchIdentifiers.delete(touch.identifier);
+    });
+
+    if (touchIdentifiers.size === 0) {
+        isMoving = false;
+        stopShooting();
+    }
 }, { passive: false });
 
-// Update startShooting function to only shoot for the active player
+canvas.addEventListener('touchcancel', (e) => {
+    if (!gameStarted || gameOver) return;
+    e.preventDefault();
+
+    Array.from(e.changedTouches).forEach(touch => {
+        touchIdentifiers.delete(touch.identifier);
+    });
+
+    if (touchIdentifiers.size === 0) {
+        isMoving = false;
+        stopShooting();
+    }
+}, { passive: false });
+
+// Update startShooting function to handle multiple players
 function startShooting() {
     isShooting = true;
     if (shootInterval) clearInterval(shootInterval);
     shootInterval = setInterval(() => {
-        if (activePlayer && !gameOver && gameStarted) {
-            activePlayer.shoot();
+        if (!gameOver && gameStarted) {
+            touchIdentifiers.forEach(touchData => {
+                touchData.player.shoot();
+            });
         }
     }, SHOOT_DELAY);
 }
