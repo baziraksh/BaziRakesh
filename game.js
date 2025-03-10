@@ -151,10 +151,10 @@ class Player {
             ctx.font = '16px Arial';
             if (this.isTopPlayer) {
                 ctx.textAlign = 'left';
-                ctx.fillText('P2', healthBarX + healthBarWidth + 10, healthBarY + healthBarHeight);
+                ctx.fillText('P2', 10, healthBarY + healthBarHeight + 20);
             } else {
                 ctx.textAlign = 'right';
-                ctx.fillText('P1', healthBarX - 5, healthBarY + healthBarHeight);
+                ctx.fillText('P1', GAME_WIDTH - 10, healthBarY - 5);
             }
         }
         
