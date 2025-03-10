@@ -140,8 +140,8 @@ class Player {
             ctx.fillStyle = '#ff0000';
             ctx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
             
-            // Health bar foreground (green)
-            ctx.fillStyle = '#00ff00';
+            // Health bar foreground (blue instead of green)
+            ctx.fillStyle = '#00ffff';
             ctx.fillRect(healthBarX, healthBarY, healthBarWidth * healthPercentage, healthBarHeight);
             
             // Draw player number next to health bar
@@ -906,6 +906,58 @@ function gameLoop(currentTime) {
         animationFrameId = requestAnimationFrame(gameLoop);
     }
 }
+
+// Add touch controls after the keyboard controls
+let touchStartX = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+    if (!gameStarted || gameOver) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    isMoving = true;
+    
+    if (player) player.shoot();
+    if (player2 && isMultiplayer) player2.shoot();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!gameStarted || gameOver) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    touchStartX = touch.clientX;
+    
+    if (player) {
+        player.x += deltaX;
+        if (player.x < 0) player.x = 0;
+        if (player.x > GAME_WIDTH - player.width) player.x = GAME_WIDTH - player.width;
+    }
+    
+    if (player2 && isMultiplayer) {
+        player2.x += deltaX;
+        if (player2.x < 0) player2.x = 0;
+        if (player2.x > GAME_WIDTH - player2.width) player2.x = GAME_WIDTH - player2.width;
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    if (!gameStarted || gameOver) return;
+    e.preventDefault();
+    isMoving = false;
+}, { passive: false });
+
+// Add click handler for game over screen
+canvas.addEventListener('click', () => {
+    if (gameOver) {
+        const menuScreen = document.getElementById('menuScreen');
+        if (menuScreen) {
+            menuScreen.style.display = 'flex';
+        }
+        gameOver = false;
+        gameStarted = false;
+    }
+});
 
 // Start game loop
 gameLoop(); 
