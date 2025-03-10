@@ -117,7 +117,7 @@
             transform: scale(0.95);
         }
 
-        #title {
+        #gameTitle {
             position: absolute;
             top: 20px;
             left: 20px;
@@ -215,7 +215,7 @@
                 border-radius: 0;
             }
 
-            #title {
+            #gameTitle {
                 font-size: 28px;
                 top: 15px;
                 left: 15px;
@@ -236,7 +236,7 @@
         }
 
         @media (max-height: 600px) {
-            #title {
+            #gameTitle {
                 font-size: 24px;
                 top: 10px;
                 left: 10px;
@@ -255,17 +255,73 @@
                 right: 5px;
             }
         }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        #difficultyButtons {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .menu-button {
+            background: linear-gradient(45deg, #2b2b2b, #3f3f3f);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 200px;
+            text-align: center;
+            outline: none;
+        }
+
+        .menu-button:hover {
+            background: linear-gradient(45deg, #3f3f3f, #2b2b2b);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffff;
+        }
+
+        .menu-button:active {
+            transform: scale(0.95);
+        }
+
+        .menu-button.back-button {
+            background: linear-gradient(45deg, #ff0066, #ff3333);
+            border: 2px solid #ff3333;
+            color: #ffffff;
+            margin-top: 20px;
+        }
+
+        .menu-button.back-button:hover {
+            background: linear-gradient(45deg, #ff3333, #ff0066);
+            box-shadow: 0 0 15px #ff3333;
+        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
         <div id="menuScreen">
-            <h1 id="title">Space Shooter</h1>
+            <h1 id="gameTitle">Space Shooter</h1>
             <img id="gameLogo" src="logo.jpg" alt="Game Logo">
-            <button id="easy" class="button">Easy</button>
-            <button id="medium" class="button">Medium</button>
-            <button id="hard" class="button">Hard</button>
-            <button id="multiplayer" class="button">Multiplayer</button>
+            <div class="menu-buttons">
+                <button id="singlePlayer" class="menu-button">Single Player</button>
+                <div id="difficultyButtons" style="display: none;">
+                    <button id="easy" class="menu-button">Easy</button>
+                    <button id="medium" class="menu-button">Medium</button>
+                    <button id="hard" class="menu-button">Hard</button>
+                    <button id="backButton" class="menu-button back-button">Back</button>
+                </div>
+                <button id="multiplayer" class="menu-button">Multiplayer</button>
+            </div>
         </div>
         <canvas id="gameCanvas"></canvas>
         <audio id="shootSound" src="shoot.mp3"></audio>
