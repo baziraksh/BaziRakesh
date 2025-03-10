@@ -253,22 +253,20 @@
 </head>
 <body>
     <div id="gameContainer">
-        <canvas id="gameCanvas"></canvas>
         <div id="menuScreen">
-            <img id="gameLogo" src="logo.jpg" alt="Space Shooter Logo">
-            <h1 id="title">SPACE SHOOTER</h1>
-            <button id="easy" class="button">EASY</button>
-            <button id="medium" class="button">MEDIUM</button>
-            <button id="hard" class="button">HARD</button>
-            <button id="multiplayer" class="button">MULTIPLAYER</button>
+            <h1 id="title">Space Shooter</h1>
+            <img id="gameLogo" src="logo.jpg" alt="Game Logo">
+            <button id="easy" class="button">Easy</button>
+            <button id="medium" class="button">Medium</button>
+            <button id="hard" class="button">Hard</button>
+            <button id="multiplayer" class="button">Multiplayer</button>
         </div>
+        <canvas id="gameCanvas"></canvas>
+        <audio id="shootSound" src="shoot.mp3"></audio>
+        <audio id="explosionSound" src="explosion.mp3"></audio>
+        <audio id="gameOverSound" src="gameover.mp3"></audio>
+        <audio id="bgMusic" src="background.mp3"></audio>
     </div>
-
-    <!-- Audio elements -->
-    <audio id="shootSound" src="shoot.mp3" preload="auto"></audio>
-    <audio id="explosionSound" src="explosion.mp3" preload="auto"></audio>
-    <audio id="gameOverSound" src="gameover.mp3" preload="auto"></audio>
-    <audio id="bgMusic" src="background.mp3" loop preload="auto"></audio>
 
     <script src="game.js"></script>
 </body>
