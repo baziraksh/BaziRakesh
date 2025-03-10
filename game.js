@@ -149,9 +149,13 @@ class Player {
             // Draw player number next to health bar
             ctx.fillStyle = '#ffffff';
             ctx.font = '16px Arial';
-            ctx.textAlign = this.isTopPlayer ? 'right' : 'right';
-            const labelX = this.isTopPlayer ? healthBarX + healthBarWidth + 5 : healthBarX - 5;
-            ctx.fillText(this.isTopPlayer ? 'P2' : 'P1', labelX, healthBarY + healthBarHeight);
+            if (this.isTopPlayer) {
+                ctx.textAlign = 'left';
+                ctx.fillText('P2', healthBarX + healthBarWidth + 10, healthBarY + healthBarHeight);
+            } else {
+                ctx.textAlign = 'right';
+                ctx.fillText('P1', healthBarX - 5, healthBarY + healthBarHeight);
+            }
         }
         
         // Draw ship
