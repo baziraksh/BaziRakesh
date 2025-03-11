@@ -2,7 +2,7 @@
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 const PLAYER_SPEED = 8;
-const SHOOT_DELAY = 200; // Slightly faster shooting
+const SHOOT_DELAY = 50; // Slightly faster shooting
 
 // Visual effects constants
 const PARTICLE_COUNT = 15;
